@@ -51,7 +51,12 @@
               ></el-button>
             </el-tooltip>
             <el-tooltip effect="dark" content="分配角色" placement="top-start" :enterable="false">
-              <el-button type="warning" icon="el-icon-s-tools" size="mini"></el-button>
+              <el-button
+                type="warning"
+                icon="el-icon-s-tools"
+                size="mini"
+                @click="rolesDistrubte(scope.row)"
+              ></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -103,8 +108,33 @@
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogEdit = false">取 消</el-button>
+        <el-button @click="dialogShowEdit = false">取 消</el-button>
         <el-button type="primary" @click="userEdit">确 定</el-button>
+      </span>
+    </el-dialog>
+    <!-- 添加分配角色对话框 -->
+    <el-dialog @close="rolesdialogClosed" title="分配角色" :visible.sync="dialogShowRoles" width="50%">
+      <el-form :model="rolesInfo" ref="rolesFormRef" label-width="70ppx">
+        <el-form-item label="用户名">
+          <el-input v-model="rolesInfo.username" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-input v-model="rolesInfo.role_name" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="分配新角色">
+          <el-select v-model="newRoleId" placeholder="请选择">
+            <el-option
+              v-for="item in this.rolesList"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogShowRoles = false">取 消</el-button>
+        <el-button type="primary" @click="rolesDistrubteSubmit">确 定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -141,6 +171,7 @@ export default {
       total: 0,
       dialogVisible: false,
       dialogShowEdit: false,
+      dialogShowRoles: false,
       // 添加用户的表单数据
       addForm: {
         username: '',
@@ -153,6 +184,12 @@ export default {
         // email: '',
         // mobile: ''
       },
+      // 获取当前分配角色的用户信息
+      rolesInfo: {},
+      // 获取全部的角色列表
+      rolesList: [],
+      // 选择的新角色
+      newRoleId: '',
       // 添加表单验证的规则对象
       addFormRules: {
         username: [
@@ -197,7 +234,6 @@ export default {
       }
       this.userList = res.data.users
       this.total = res.data.total
-      console.log(res)
     },
     // 监听页面Size改变
     handleSizeChange(newSize) {
@@ -227,6 +263,10 @@ export default {
     // 监听编辑用户信息对话框的关闭事件
     editdialogClosed() {
       this.$refs.editFormRef.resetFields()
+    },
+    // 监听分配角色对话框的关闭事件
+    rolesdialogClosed() {
+      this.$refs.rolesFormRef.resetFields()
     },
     // 点击按钮添加新用户
     addUser() {
@@ -290,6 +330,37 @@ export default {
       }
       this.$message.success('删除用户成功')
       this.getUserList()
+    },
+    // 获取当前用户角色信息和全部角色列表
+    async rolesDistrubte(userInfo) {
+      this.rolesInfo = userInfo
+      // 获取全部的角色列表
+      const { data: res } = await this.$http.get('roles')
+      if (res.meta.status !== 200) {
+        return this.$message.error('获取角色列表失败')
+      } else {
+        this.$message.success('获取角色列表成功')
+        this.rolesList = res.data
+        // console.log(this.rolesList)
+      }
+      this.dialogShowRoles = true
+    },
+    // 提交新选择的角色
+    async rolesDistrubteSubmit() {
+      // console.log(this.newRoleId)
+      const { data: res } = await this.$http.put(
+        `users/${this.rolesInfo.id}/role`,
+        {
+          rid: this.newRoleId
+        }
+      )
+      if (res.meta.status !== 200) {
+        return this.$message.error('设置角色失败')
+      } else {
+        this.$message.success('设置角色成功')
+        this.getUserList()
+        this.dialogShowRoles = false
+      }
     }
   }
 }
